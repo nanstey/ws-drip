@@ -1,0 +1,132 @@
+require("dotenv-yaml").config();
+const { auth, accounts, orders } = require("wstrade-api");
+
+const DEBUG = process.env.DEBUG;
+
+exports.wsDrip = async (req, res) => {
+  try {
+    await wsAuth(req);
+
+    const accountId = await getAccountId();
+    const accountInfo = await getAccountInfo(accountId);
+    const orderResults = await placeBuyOrders(accountInfo);
+
+    res.send({ status: 200, orderResults });
+  } catch (e) {
+    res.send({ status: 500, error: e });
+  }
+};
+
+async function wsAuth(req) {
+  auth.on("otp", req.otpCallback);
+  await auth.login(process.env.WS_EMAIL, process.env.WS_PASS);
+}
+
+async function getAccountId() {
+  let accs = await accounts.all();
+  return process.env.ACCOUNT_TYPE === "rrsp" ? accs.rrsp : accs.tfsa;
+}
+
+async function getAccountInfo(accountId) {
+  const buyingPower = await getBuyingPower(accountId);
+  const positions = await accounts.positions(accountId);
+  const activities = await accounts.activities({
+    type: ["dividend", "buy"],
+    accounts: [accountId],
+  });
+  const dividends = getDividends(positions, activities);
+
+  return { buyingPower, positions, activities, dividends };
+}
+
+async function getBuyingPower(accountId) {
+  let accountList = await accounts.data();
+  const accountData = accountList.find((acc) => acc.id === accountId);
+  return accountData.buying_power.amount;
+}
+
+/*
+ Find uninvested dividends since last completed buy order
+*/
+function getDividends(positions, activities) {
+  const dividendsBySymbol = positions.reduce((obj, pos) => {
+    return {
+      ...obj,
+      [pos.stock.symbol]: 0,
+    };
+  }, {});
+
+  let totalUninvested = 0;
+  activities.every((a) => {
+    if (a.object === "order" && a.status === "posted") return false;
+
+    if (a.object === "dividend") {
+      totalUninvested += a.market_value.amount;
+      dividendsBySymbol[a.symbol] += a.market_value.amount;
+    }
+
+    return true;
+  });
+
+  return { totalUninvested, dividendsBySymbol };
+}
+
+async function placeBuyOrders({ buyingPower, positions, dividends }) {
+  const baseAmount = calculateBaseOrder(
+    buyingPower,
+    positions.length,
+    dividends.totalUninvested
+  );
+
+  const results = [];
+  for (const [symbol, dividendAmount] of Object.entries(
+    dividends.dividendsBySymbol
+  )) {
+    const buyAmount = calculateBuyAmount(baseAmount, dividendAmount);
+    const result = await placeBuyOrder(symbol, buyAmount);
+    results.push({
+      symbol,
+      buyAmount,
+      dividendAmount,
+      result,
+    });
+  }
+
+  return results;
+}
+
+async function placeBuyOrder(symbol, buyAmount) {
+  let response = null;
+  let error = null;
+
+  if (DEBUG) {
+    response = "debug mode";
+  } else {
+    if (buyAmount >= 1) {
+      try {
+        response = await orders.fractionalBuy(accountId, symbol, buyAmount);
+      } catch (e) {
+        error = e;
+      }
+    } else {
+      response = "fractional orders must be $1 or more in value";
+    }
+  }
+
+  return {
+    response,
+    error,
+  };
+}
+
+function calculateBaseOrder(buyingPower, numPositions, totalUninvested) {
+  // adjust by 10^2 to avoid floating point shenanigans
+  return (
+    Math.floor((100 * buyingPower - 100 * totalUninvested) / numPositions) / 100
+  );
+}
+
+function calculateBuyAmount(baseAmount, dividendAmount) {
+  // adjust by 10^2 to avoid floating point shenanigans
+  return (baseAmount * 100 + dividendAmount * 100) / 100;
+}

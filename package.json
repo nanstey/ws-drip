@@ -1,0 +1,20 @@
+{
+  "name": "ws-drip",
+  "version": "1.0.0",
+  "description": "Wealthsimple DRIP (dividend reinvestment plan)",
+  "main": "index.js",
+  "scripts": {
+    "start": "functions-framework --target=wsDrip"
+  },
+  "author": "Noel Anstey",
+  "license": "ISC",
+  "dependencies": {
+    "base-64": "^1.0.0",
+    "dotenv-yaml": "^0.1.4",
+    "googleapis": "^92.0.0",
+    "wstrade-api": "github:nanstey/wstrade-api"
+  },
+  "devDependencies": {
+    "@google-cloud/functions-framework": "^2.1.0"
+  }
+}

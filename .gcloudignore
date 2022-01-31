@@ -1,0 +1,10 @@
+.git
+.gitignore
+.gcloudignore
+package-lock.json
+
+.env.yaml
+example.env.yaml
+serviceAccount-example.json
+
+node_modules/
