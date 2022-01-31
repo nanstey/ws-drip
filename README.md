@@ -1,6 +1,8 @@
 # Wealthsimple DRIP
 
-A dividend reinvestment plan (DRIP) is a program that allows investors to reinvest their cash dividends into additional shares or fractional shares of the underlying stock on the dividend payment date. Since Wealthsimple doesn't provide this functionality automatically, the goal of this project is to automate the process.
+A dividend reinvestment plan (DRIP) is a program that allows investors to reinvest their cash dividends into additional shares or fractional shares of the underlying stock. 
+
+Since Wealthsimple doesn't provide this functionality automatically, the goal of this project is to automate this process.
 
 ## How it works
 1. Authenticate with Wealthsimple using email, password, and OTP code
