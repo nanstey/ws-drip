@@ -1,4 +1,4 @@
-require("dotenv-yaml").config();
+require("dotenv").config();
 const { auth, accounts, orders } = require("wstrade-api");
 
 const DEBUG = process.env.DEBUG;
@@ -49,6 +49,7 @@ async function getBuyingPower(accountId) {
  Find uninvested dividends since last completed buy order
 */
 function getDividends(positions, activities) {
+  const symbolsCounted = {};
   const dividendsBySymbol = positions.reduce((obj, pos) => {
     return {
       ...obj,
@@ -58,13 +59,17 @@ function getDividends(positions, activities) {
 
   let totalUninvested = 0;
   activities.every((a) => {
-    if (a.object === "order" && a.status === "posted") return false;
+    if (symbolsCounted.length === positions.length) return false;
 
-    if (a.object === "dividend") {
-      totalUninvested += a.market_value.amount;
-      dividendsBySymbol[a.symbol] += a.market_value.amount;
+    if (!symbolsCounted[a.symbol]) {
+      if (a.object === "order" && a.status === "posted") {
+        symbolsCounted[a.symbol] = true;
+      }
+      if (a.object === "dividend") {
+        totalUninvested += a.market_value.amount;
+        dividendsBySymbol[a.symbol] += a.market_value.amount;
+      }
     }
-
     return true;
   });
 

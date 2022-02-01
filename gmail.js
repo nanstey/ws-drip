@@ -1,4 +1,4 @@
-require("dotenv-yaml").config();
+require("dotenv").config();
 const { google } = require("googleapis");
 const base64 = require("base-64");
 

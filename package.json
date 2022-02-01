@@ -10,7 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "base-64": "^1.0.0",
-    "dotenv-yaml": "^0.1.4",
+    "dotenv": "^15.0.0",
     "googleapis": "^92.0.0",
     "wstrade-api": "github:nanstey/wstrade-api"
   },

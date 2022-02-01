@@ -9,9 +9,9 @@ Since Wealthsimple doesn't provide this functionality automatically, the goal of
 2. Pull account info:
    * Current buying power
    * Open positions
-   * Dividends collected since last completed buy order
+   * Dividends collected since last executed buy order for each position (or within the last 99 activites on the account)
 3. Place fractional buy orders for <i>every</i> open position
-   * Determine a base dollar amount to buy for all positions based on the current buying power minus any dividends received since the last executed buy order 
+   * Determine a base dollar amount to buy for all positions based on the current buying power minus accumulated dividends
    * Securities that have <i>not</i> paid dividends place buy orders of the base amount
    * Securities that have paid dividends place buy orders of the base amount plus dividends
 
@@ -36,7 +36,7 @@ Since Wealthsimple doesn't provide this functionality automatically, the goal of
 ## Getting Started
 1. Fork and clone the repo
 2. Create an API key for your service account. Download the JSON file to the project directory and name it `serviceAccount.json`
-3. Rename `.env.yaml.example` to `.env.yaml` and fill out the environment variables for Gmail and Wealthsimple
+3. Rename `.env.example` to `.env` and fill out the environment variables for Gmail and Wealthsimple
 
 ## Running the script
 
@@ -115,7 +115,7 @@ Sample response:
 
 `result.response` will return the API response from Wealthsimple
 
-`result.error` will contain any errors thrown by [wstrade-api](https://github.com/ahmedsakr/wstrade-api)
+`result.error` will contain any errors thrown by [wstrade-api](https://github.com/nanstey/wstrade-api)
 
 ## Deployment
 
@@ -133,7 +133,13 @@ gcloud auth login
 
 Deploy the cloud function to your GCP project
 ```
-gcloud functions deploy wsDrip --project=${PROJECT_ID}--runtime nodejs16 --trigger-http --allow-unauthenticated --env-vars-file=.env.yaml
+gcloud functions deploy wsDrip --project={PROJECT_ID} --runtime nodejs16 --trigger-http --allow-unauthenticated --set-env-vars={ENV_VARS}
 ```
 
-Configure [Google Cloud Scheduler](https://cloud.google.com/scheduler/docs/quickstart) to trigger the function periodically.
+Configure [Google Cloud Scheduler](https://cloud.google.com/scheduler/docs/quickstart) to schedule the function to execute as a cron.
+
+## Acknowledgements
+
+Thanks to [@ahmedsakr](https://github.com/ahmedsakr/) for publishing the [wstrade-api](https://github.com/ahmedsakr/wstrade-api) wrapper package via NPM. 
+
+This project was archived as of May 2021. I've forked it [here](https://github.com/nanstey/wstrade-api) and extended it to support fractional buy/sell orders.

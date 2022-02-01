@@ -1,4 +1,4 @@
-.env.yaml
+.env
 serviceAccount.json
 
 node_modules/

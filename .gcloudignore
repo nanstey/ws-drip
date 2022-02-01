@@ -3,8 +3,8 @@
 .gcloudignore
 package-lock.json
 
-.env.yaml
-example.env.yaml
+.env
+.env.example
 serviceAccount-example.json
 
 node_modules/
