@@ -1,7 +1,7 @@
 require("dotenv").config();
 const { auth, accounts, orders } = require("wstrade-api");
 
-const DEBUG = process.env.DEBUG;
+const DEBUG = process.env.DEBUG === "true";
 
 exports.wsDrip = async (req, res) => {
   try {
@@ -9,7 +9,7 @@ exports.wsDrip = async (req, res) => {
 
     const accountId = await getAccountId();
     const accountInfo = await getAccountInfo(accountId);
-    const orderResults = await placeBuyOrders(accountInfo);
+    const orderResults = await placeBuyOrders(accountId, accountInfo);
 
     res.send({ status: 200, orderResults });
   } catch (e) {
@@ -76,7 +76,10 @@ function getDividends(positions, activities) {
   return { totalUninvested, dividendsBySymbol };
 }
 
-async function placeBuyOrders({ buyingPower, positions, dividends }) {
+async function placeBuyOrders(
+  accountId,
+  { buyingPower, positions, dividends }
+) {
   const baseAmount = calculateBaseOrder(
     buyingPower,
     positions.length,
@@ -88,7 +91,7 @@ async function placeBuyOrders({ buyingPower, positions, dividends }) {
     dividends.dividendsBySymbol
   )) {
     const buyAmount = calculateBuyAmount(baseAmount, dividendAmount);
-    const result = await placeBuyOrder(symbol, buyAmount);
+    const result = await placeBuyOrder(accountId, symbol, buyAmount);
     results.push({
       symbol,
       buyAmount,
@@ -100,28 +103,27 @@ async function placeBuyOrders({ buyingPower, positions, dividends }) {
   return results;
 }
 
-async function placeBuyOrder(symbol, buyAmount) {
-  let response = null;
-  let error = null;
-
+async function placeBuyOrder(accountId, symbol, buyAmount) {
   if (DEBUG) {
-    response = "debug mode";
-  } else {
-    if (buyAmount >= 1) {
-      try {
-        response = await orders.fractionalBuy(accountId, symbol, buyAmount);
-      } catch (e) {
-        error = e;
-      }
-    } else {
-      response = "fractional orders must be $1 or more in value";
-    }
+    return {
+      response: "debug mode"
+    };
+  }
+  
+  if (buyAmount < 1) {
+    return {
+      error: "fractional orders must be $1 or more in value",
+    };
   }
 
-  return {
-    response,
-    error,
-  };
+  return await orders
+    .fractionalBuy(accountId, symbol, buyAmount)
+    .then((response) => {
+      return { response };
+    })
+    .catch((error) => {
+      return {  error  };;
+    });
 }
 
 function calculateBaseOrder(buyingPower, numPositions, totalUninvested) {
@@ -133,5 +135,5 @@ function calculateBaseOrder(buyingPower, numPositions, totalUninvested) {
 
 function calculateBuyAmount(baseAmount, dividendAmount) {
   // adjust by 10^2 to avoid floating point shenanigans
-  return (baseAmount * 100 + dividendAmount * 100) / 100;
+  return Math.round((baseAmount + dividendAmount) * 100) / 100;
 }
